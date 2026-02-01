@@ -1,0 +1,28 @@
+flowchart LR
+  subgraph Clients
+    A[Customer App / Web]
+    B[Ecommerce / Dealer]
+  end
+
+  A --> LB
+  B --> LB
+
+  LB[Load Balancer]
+
+  subgraph AppLayer["Go API Service (Stateless)"]
+    S1[API Instance 1]
+    S2[API Instance 2]
+  end
+
+  LB --> S1
+  LB --> S2
+
+  S1 --> DB[(MySQL InnoDB Primary)]
+  S2 --> DB
+  DB --> DBR[(Read Replica / Backup)]
+
+  S1 --> OBJ[(Object Storage for KTP/Selfie)]
+  S2 --> OBJ
+
+  S1 --> OBS[(Logs & Metrics)]
+  S2 --> OBS

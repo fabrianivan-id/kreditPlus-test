@@ -1,0 +1,45 @@
+CREATE DATABASE IF NOT EXISTS kreditplus;
+USE kreditplus;
+
+CREATE TABLE IF NOT EXISTS customers (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nik VARCHAR(32) NOT NULL UNIQUE,
+  full_name VARCHAR(100) NOT NULL,
+  legal_name VARCHAR(100) NOT NULL,
+  birth_place VARCHAR(100) NOT NULL,
+  birth_date DATE NOT NULL,
+  salary BIGINT NOT NULL,
+  ktp_photo_url VARCHAR(255) NOT NULL,
+  selfie_photo_url VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS limits (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  tenor_months INT NOT NULL,
+  amount BIGINT NOT NULL,
+  used_amount BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_customer_tenor (customer_id, tenor_months),
+  CONSTRAINT fk_limits_customer FOREIGN KEY (customer_id) REFERENCES customers(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  contract_number VARCHAR(50) NOT NULL UNIQUE,
+  customer_id BIGINT NOT NULL,
+  tenor_months INT NOT NULL,
+  asset_name VARCHAR(100) NOT NULL,
+  channel VARCHAR(20) NOT NULL,
+  otr BIGINT NOT NULL,
+  admin_fee BIGINT NOT NULL,
+  installment_amount BIGINT NOT NULL,
+  interest_amount BIGINT NOT NULL,
+  financed_amount BIGINT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_tx_customer (customer_id),
+  CONSTRAINT fk_tx_customer FOREIGN KEY (customer_id) REFERENCES customers(id)
+) ENGINE=InnoDB;

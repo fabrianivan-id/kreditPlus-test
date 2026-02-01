@@ -1,0 +1,133 @@
+{
+  "info": {
+    "name": "PT XYZ Multifinance API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for the KreditPlus case study API."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "apiKey",
+      "value": "change-me"
+    },
+    {
+      "key": "customerId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/healthz"
+          }
+        },
+        {
+          "name": "GET /readyz",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/readyz"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "POST /customers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nik\": \"1234567890123456\",\n  \"full_name\": \"Budi\",\n  \"legal_name\": \"Budi Santoso\",\n  \"birth_place\": \"Jakarta\",\n  \"birth_date\": \"1990-01-01\",\n  \"salary\": 5000000,\n  \"ktp_photo_url\": \"https://example.com/ktp.jpg\",\n  \"selfie_photo_url\": \"https://example.com/selfie.jpg\"\n}"
+            },
+            "url": "{{baseUrl}}/customers"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Limits",
+      "item": [
+        {
+          "name": "POST /customers/{id}/limits",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenor_months\": 3,\n  \"amount\": 500000\n}"
+            },
+            "url": "{{baseUrl}}/customers/{{customerId}}/limits"
+          }
+        },
+        {
+          "name": "GET /customers/{id}/limits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/customers/{{customerId}}/limits"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "POST /transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contract_number\": \"CN-001\",\n  \"customer_id\": 1,\n  \"tenor_months\": 3,\n  \"asset_name\": \"Motor\",\n  \"channel\": \"dealer\",\n  \"otr\": 200000,\n  \"admin_fee\": 10000,\n  \"installment_amount\": 20000,\n  \"interest_amount\": 5000\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        }
+      ]
+    }
+  ]
+}

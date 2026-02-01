@@ -1,0 +1,42 @@
+erDiagram
+  CUSTOMERS ||--o{ LIMITS : has
+  CUSTOMERS ||--o{ TRANSACTIONS : makes
+
+  CUSTOMERS {
+    BIGINT id PK
+    VARCHAR nik UK
+    VARCHAR full_name
+    VARCHAR legal_name
+    VARCHAR birth_place
+    DATE birth_date
+    BIGINT salary
+    VARCHAR ktp_photo_url
+    VARCHAR selfie_photo_url
+    TIMESTAMP created_at
+    TIMESTAMP updated_at
+  }
+
+  LIMITS {
+    BIGINT id PK
+    BIGINT customer_id FK
+    INT tenor_months
+    BIGINT amount
+    BIGINT used_amount
+    TIMESTAMP created_at
+    TIMESTAMP updated_at
+  }
+
+  TRANSACTIONS {
+    BIGINT id PK
+    VARCHAR contract_number UK
+    BIGINT customer_id FK
+    INT tenor_months
+    VARCHAR asset_name
+    VARCHAR channel
+    BIGINT otr
+    BIGINT admin_fee
+    BIGINT installment_amount
+    BIGINT interest_amount
+    BIGINT financed_amount
+    TIMESTAMP created_at
+  }

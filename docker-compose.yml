@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: kreditplus
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql:ro
+
+  api:
+    build: .
+    environment:
+      APP_ADDR: ":8080"
+      DB_DSN: "root:password@tcp(db:3306)/kreditplus?parseTime=true"
+      API_KEY: "change-me"
+      RATE_LIMIT_PER_MIN: "60"
+      BODY_LIMIT_BYTES: "1048576"
+      ALLOWED_ORIGINS: "*"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
