@@ -160,7 +160,7 @@ func TestCreateTransactionSuccess(t *testing.T) {
 func TestCreateTransactionLimitExceeded(t *testing.T) {
 	limitRepo := &stubLimitRepo{limits: []entity.Limit{
 		{ID: 1, CustomerID: 10, TenorMonths: 3, Amount: 500_000, UsedAmount: 100_000},
-		{ID: 2, CustomerID: 10, TenorMonths: 6, Amount: 150_000, UsedAmount: 100_000},
+		{ID: 2, CustomerID: 10, TenorMonths: 6, Amount: 120_000, UsedAmount: 100_000},
 	}}
 	transactionRepo := &stubTransactionRepo{}
 
@@ -180,5 +180,30 @@ func TestCreateTransactionLimitExceeded(t *testing.T) {
 
 	if err == nil || err != ErrLimitExceeded {
 		t.Fatalf("expected limit exceeded error")
+	}
+}
+
+func TestCreateTransactionMissingBaseTenor(t *testing.T) {
+	limitRepo := &stubLimitRepo{limits: []entity.Limit{
+		{ID: 2, CustomerID: 10, TenorMonths: 6, Amount: 1_000_000, UsedAmount: 0},
+	}}
+	transactionRepo := &stubTransactionRepo{}
+
+	uc := NewTransactionUsecase(stubTxManager{tx: &stubTx{}}, limitRepo, transactionRepo)
+
+	_, err := uc.Create(context.Background(), CreateTransactionInput{
+		ContractNumber:    "CN-003",
+		CustomerID:        10,
+		TenorMonths:       3,
+		AssetName:         "Motor",
+		Channel:           "dealer",
+		OTR:               20_000,
+		AdminFee:          5_000,
+		InstallmentAmount: 5_000,
+		InterestAmount:    1_000,
+	})
+
+	if err == nil || err != ErrNotFound {
+		t.Fatalf("expected not found error")
 	}
 }

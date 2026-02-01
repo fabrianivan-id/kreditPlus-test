@@ -85,3 +85,13 @@ func TestSetLimitAllowsWhenNotFound(t *testing.T) {
 		t.Fatalf("expected used baseline to be applied")
 	}
 }
+
+func TestSetLimitRejectsWhenBelowBaselineFromLowerTenor(t *testing.T) {
+	repo := &stubLimitOnlyRepo{errGet: repository.ErrNotFound, maxUsed: 300_000}
+	uc := NewLimitUsecase(repo)
+
+	err := uc.Set(context.Background(), 10, 6, 200_000)
+	if err == nil || err != ErrConflict {
+		t.Fatalf("expected conflict error")
+	}
+}

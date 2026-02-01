@@ -21,6 +21,10 @@ flowchart LR
   S2 --> DB
   DB --> DBR[(Read Replica / Backup)]
 
+  NOTE_TX["Tx: lock limits >= tenor and update used_amount"]
+  S1 --> NOTE_TX
+  NOTE_TX --> DB
+
   S1 --> OBJ[(Object Storage for KTP/Selfie)]
   S2 --> OBJ
 
