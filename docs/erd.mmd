@@ -26,6 +26,8 @@ erDiagram
     TIMESTAMP updated_at
   }
 
+  %% Unique: customer_id + tenor_months
+
   TRANSACTIONS {
     BIGINT id PK
     VARCHAR contract_number UK
