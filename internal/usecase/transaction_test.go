@@ -40,25 +40,67 @@ func (m stubTxManager) BeginTx(ctx context.Context, opts *sql.TxOptions) (reposi
 }
 
 type stubLimitRepo struct {
-	limit       *entity.Limit
-	updatedUsed int64
+	limits  []entity.Limit
+	updated map[int64]int64
 }
 
 func (s *stubLimitRepo) GetByCustomerAndTenor(ctx context.Context, customerID int64, tenor int) (*entity.Limit, error) {
-	return s.limit, nil
+	for i := range s.limits {
+		if s.limits[i].CustomerID == customerID && s.limits[i].TenorMonths == tenor {
+			return &s.limits[i], nil
+		}
+	}
+	return nil, repository.ErrNotFound
 }
 
 func (s *stubLimitRepo) GetForUpdate(ctx context.Context, tx repository.Tx, customerID int64, tenor int) (*entity.Limit, error) {
-	return s.limit, nil
+	return s.GetByCustomerAndTenor(ctx, customerID, tenor)
 }
 
-func (s *stubLimitRepo) Upsert(ctx context.Context, customerID int64, tenor int, amount int64) error {
+func (s *stubLimitRepo) ListForUpdateFromTenor(ctx context.Context, tx repository.Tx, customerID int64, tenor int) ([]entity.Limit, error) {
+	var out []entity.Limit
+	for _, l := range s.limits {
+		if l.CustomerID == customerID && l.TenorMonths >= tenor {
+			out = append(out, l)
+		}
+	}
+	if len(out) == 0 {
+		return nil, repository.ErrNotFound
+	}
+	return out, nil
+}
+
+func (s *stubLimitRepo) GetMaxUsedAtOrBelowTenor(ctx context.Context, customerID int64, tenor int) (int64, error) {
+	var found bool
+	var maxTenor int
+	var used int64
+	for _, l := range s.limits {
+		if l.CustomerID == customerID && l.TenorMonths <= tenor && (!found || l.TenorMonths > maxTenor) {
+			found = true
+			maxTenor = l.TenorMonths
+			used = l.UsedAmount
+		}
+	}
+	if !found {
+		return 0, repository.ErrNotFound
+	}
+	return used, nil
+}
+
+func (s *stubLimitRepo) Upsert(ctx context.Context, customerID int64, tenor int, amount int64, usedAmount int64) error {
 	return nil
 }
 
 func (s *stubLimitRepo) UpdateUsed(ctx context.Context, tx repository.Tx, limitID int64, usedAmount int64) error {
-	s.updatedUsed = usedAmount
-	s.limit.UsedAmount = usedAmount
+	if s.updated == nil {
+		s.updated = make(map[int64]int64)
+	}
+	s.updated[limitID] = usedAmount
+	for i := range s.limits {
+		if s.limits[i].ID == limitID {
+			s.limits[i].UsedAmount = usedAmount
+		}
+	}
 	return nil
 }
 
@@ -77,8 +119,10 @@ func (s *stubTransactionRepo) Create(ctx context.Context, tx repository.Tx, t *e
 }
 
 func TestCreateTransactionSuccess(t *testing.T) {
-	limit := &entity.Limit{ID: 1, CustomerID: 10, TenorMonths: 3, Amount: 1_000_000, UsedAmount: 100_000}
-	limitRepo := &stubLimitRepo{limit: limit}
+	limitRepo := &stubLimitRepo{limits: []entity.Limit{
+		{ID: 1, CustomerID: 10, TenorMonths: 3, Amount: 1_000_000, UsedAmount: 100_000},
+		{ID: 2, CustomerID: 10, TenorMonths: 6, Amount: 1_500_000, UsedAmount: 100_000},
+	}}
 	transactionRepo := &stubTransactionRepo{}
 
 	uc := NewTransactionUsecase(stubTxManager{tx: &stubTx{}}, limitRepo, transactionRepo)
@@ -103,19 +147,21 @@ func TestCreateTransactionSuccess(t *testing.T) {
 	}
 
 	expectedUsed := int64(100_000 + 210_000)
-	if limitRepo.updatedUsed != expectedUsed {
-		t.Fatalf("expected used amount %d, got %d", expectedUsed, limitRepo.updatedUsed)
+	if limitRepo.updated[1] != expectedUsed || limitRepo.updated[2] != expectedUsed {
+		t.Fatalf("expected used amount %d to be applied to all newer limits", expectedUsed)
 	}
 
-	expectedRemaining := limit.Amount - expectedUsed
+	expectedRemaining := int64(1_000_000 - expectedUsed)
 	if result.RemainingLimit != expectedRemaining {
 		t.Fatalf("expected remaining %d, got %d", expectedRemaining, result.RemainingLimit)
 	}
 }
 
 func TestCreateTransactionLimitExceeded(t *testing.T) {
-	limit := &entity.Limit{ID: 1, CustomerID: 10, TenorMonths: 3, Amount: 100_000, UsedAmount: 90_000}
-	limitRepo := &stubLimitRepo{limit: limit}
+	limitRepo := &stubLimitRepo{limits: []entity.Limit{
+		{ID: 1, CustomerID: 10, TenorMonths: 3, Amount: 500_000, UsedAmount: 100_000},
+		{ID: 2, CustomerID: 10, TenorMonths: 6, Amount: 150_000, UsedAmount: 100_000},
+	}}
 	transactionRepo := &stubTransactionRepo{}
 
 	uc := NewTransactionUsecase(stubTxManager{tx: &stubTx{}}, limitRepo, transactionRepo)

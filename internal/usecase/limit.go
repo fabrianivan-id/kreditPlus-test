@@ -27,11 +27,23 @@ func (uc *LimitUsecase) Set(ctx context.Context, customerID int64, tenor int, am
 			return err
 		}
 	}
-	if current != nil && amount < current.UsedAmount {
-		return ErrConflict
+	var usedBaseline int64
+	if current != nil {
+		if amount < current.UsedAmount {
+			return ErrConflict
+		}
+		usedBaseline = current.UsedAmount
+	} else {
+		usedBaseline, err = uc.repo.GetMaxUsedAtOrBelowTenor(ctx, customerID, tenor)
+		if err != nil && !errors.Is(err, repository.ErrNotFound) {
+			return err
+		}
+		if amount < usedBaseline {
+			return ErrConflict
+		}
 	}
 
-	return uc.repo.Upsert(ctx, customerID, tenor, amount)
+	return uc.repo.Upsert(ctx, customerID, tenor, amount, usedBaseline)
 }
 
 func (uc *LimitUsecase) List(ctx context.Context, customerID int64) ([]entity.Limit, error) {

@@ -11,10 +11,13 @@ import (
 type stubLimitOnlyRepo struct {
 	limit          *entity.Limit
 	errGet         error
+	maxUsed        int64
+	errMaxUsed     error
 	upsertCalled   bool
 	upsertCustomer int64
 	upsertTenor    int
 	upsertAmount   int64
+	upsertUsed     int64
 }
 
 func (s *stubLimitOnlyRepo) GetByCustomerAndTenor(ctx context.Context, customerID int64, tenor int) (*entity.Limit, error) {
@@ -28,11 +31,23 @@ func (s *stubLimitOnlyRepo) GetForUpdate(ctx context.Context, tx repository.Tx, 
 	return s.limit, nil
 }
 
-func (s *stubLimitOnlyRepo) Upsert(ctx context.Context, customerID int64, tenor int, amount int64) error {
+func (s *stubLimitOnlyRepo) ListForUpdateFromTenor(ctx context.Context, tx repository.Tx, customerID int64, tenor int) ([]entity.Limit, error) {
+	return nil, repository.ErrNotFound
+}
+
+func (s *stubLimitOnlyRepo) GetMaxUsedAtOrBelowTenor(ctx context.Context, customerID int64, tenor int) (int64, error) {
+	if s.errMaxUsed != nil {
+		return 0, s.errMaxUsed
+	}
+	return s.maxUsed, nil
+}
+
+func (s *stubLimitOnlyRepo) Upsert(ctx context.Context, customerID int64, tenor int, amount int64, usedAmount int64) error {
 	s.upsertCalled = true
 	s.upsertCustomer = customerID
 	s.upsertTenor = tenor
 	s.upsertAmount = amount
+	s.upsertUsed = usedAmount
 	return nil
 }
 
@@ -55,7 +70,7 @@ func TestSetLimitRejectsWhenBelowUsed(t *testing.T) {
 }
 
 func TestSetLimitAllowsWhenNotFound(t *testing.T) {
-	repo := &stubLimitOnlyRepo{errGet: repository.ErrNotFound}
+	repo := &stubLimitOnlyRepo{errGet: repository.ErrNotFound, maxUsed: 120_000}
 	uc := NewLimitUsecase(repo)
 
 	if err := uc.Set(context.Background(), 10, 3, 500_000); err != nil {
@@ -64,5 +79,9 @@ func TestSetLimitAllowsWhenNotFound(t *testing.T) {
 
 	if !repo.upsertCalled {
 		t.Fatalf("expected upsert to be called")
+	}
+
+	if repo.upsertUsed != 120_000 {
+		t.Fatalf("expected used baseline to be applied")
 	}
 }

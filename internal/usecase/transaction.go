@@ -69,16 +69,25 @@ func (uc *TransactionUsecase) Create(ctx context.Context, input CreateTransactio
 		}
 	}()
 
-	limit, err := uc.limitRepo.GetForUpdate(ctx, tx, input.CustomerID, input.TenorMonths)
+	limits, err := uc.limitRepo.ListForUpdateFromTenor(ctx, tx, input.CustomerID, input.TenorMonths)
 	if err != nil {
 		return nil, err
 	}
-	if limit == nil {
+	if len(limits) == 0 {
 		return nil, ErrNotFound
 	}
 
-	if limit.Remaining() < financed {
-		return nil, ErrLimitExceeded
+	foundBase := false
+	for _, limit := range limits {
+		if limit.TenorMonths == input.TenorMonths {
+			foundBase = true
+		}
+		if limit.Remaining() < financed {
+			return nil, ErrLimitExceeded
+		}
+	}
+	if !foundBase {
+		return nil, ErrNotFound
 	}
 
 	transaction := &entity.Transaction{
@@ -98,9 +107,15 @@ func (uc *TransactionUsecase) Create(ctx context.Context, input CreateTransactio
 		return nil, err
 	}
 
-	newUsed := limit.UsedAmount + financed
-	if err := uc.limitRepo.UpdateUsed(ctx, tx, limit.ID, newUsed); err != nil {
-		return nil, err
+	var remainingAfter int64
+	for _, limit := range limits {
+		newUsed := limit.UsedAmount + financed
+		if err := uc.limitRepo.UpdateUsed(ctx, tx, limit.ID, newUsed); err != nil {
+			return nil, err
+		}
+		if limit.TenorMonths == input.TenorMonths {
+			remainingAfter = limit.Amount - newUsed
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -110,7 +125,7 @@ func (uc *TransactionUsecase) Create(ctx context.Context, input CreateTransactio
 
 	return &CreateTransactionResult{
 		Transaction:   transaction,
-		RemainingLimit: limit.Amount - newUsed,
+		RemainingLimit: remainingAfter,
 	}, nil
 }
 

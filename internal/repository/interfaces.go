@@ -27,7 +27,9 @@ type CustomerRepository interface {
 type LimitRepository interface {
 	GetByCustomerAndTenor(ctx context.Context, customerID int64, tenor int) (*entity.Limit, error)
 	GetForUpdate(ctx context.Context, tx Tx, customerID int64, tenor int) (*entity.Limit, error)
-	Upsert(ctx context.Context, customerID int64, tenor int, amount int64) error
+	ListForUpdateFromTenor(ctx context.Context, tx Tx, customerID int64, tenor int) ([]entity.Limit, error)
+	GetMaxUsedAtOrBelowTenor(ctx context.Context, customerID int64, tenor int) (int64, error)
+	Upsert(ctx context.Context, customerID int64, tenor int, amount int64, usedAmount int64) error
 	UpdateUsed(ctx context.Context, tx Tx, limitID int64, usedAmount int64) error
 	ListByCustomerID(ctx context.Context, customerID int64) ([]entity.Limit, error)
 }
