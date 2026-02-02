@@ -122,7 +122,3 @@ Run unit tests before opening a PR:
 ```
 go test ./...
 ```
-
-
-You can render Mermaid diagrams with compatible editors or markdown viewers.
-# kreditPlus-test
